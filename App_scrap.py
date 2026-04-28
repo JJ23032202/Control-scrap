@@ -232,7 +232,7 @@ def render_footer():
 
 
 def guardar_scrap_supabase(data: dict):
-    supabase.table("scrap_registrado").insert(data).execute()
+    supabase.table("ScrapRegistrado").insert(data).execute()
 
 
 def leer_scrap_supabase():
