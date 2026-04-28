@@ -330,7 +330,21 @@ def escaneo():
     col1, col2 = st.columns(2)
 
     with col1:
-        st.text_input("Máquina", value=st.session_state.maquina, disabled=False)
+        maquinas = leer_excel(
+            "Maquinas",
+            ["nombre_maquina"]
+        )["nombre_maquina"].dropna().astype(str).tolist()
+
+        maquina_sel = st.selectbox(
+            "Máquina",
+            maquinas,
+            index=maquinas.index(st.session_state.maquina)
+            if st.session_state.maquina in maquinas else 0,
+            key=f"maquina_{st.session_state.form_uid}"
+        )
+
+        st.session_state.maquina = maquina_sel
+
 
 
         st.text_input(
