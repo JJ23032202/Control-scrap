@@ -4,7 +4,7 @@ import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
-
+import io
 
 # =====================================================
 # CONFIGURACIÓN
@@ -705,42 +705,58 @@ def historial():
 
     uid = st.session_state.filtro_uid
 
-    # ---------- FILTROS ----------
-    with st.expander("🔍 Filtros", expanded=True):
-        c1, c2, c3, c4 = st.columns(4)
+# ---------- ACCIONES SUPERIORES ----------
+    col_a, col_b = st.columns([1, 6])
 
-        with c1:
-            f_fecha_ini = st.date_input(
-                "Desde",
-                value=fecha_min,
-                key=f"f_fecha_ini_{uid}"
-            )
+    with col_a:
+        output = io.BytesIO()
+        df.to_excel(output, index=False)  # o df_f si quieres filtrado
+        output.seek(0)
 
-        with c2:
-            f_fecha_fin = st.date_input(
-                "Hasta",
-                value=fecha_max,
-                key=f"f_fecha_fin_{uid}"
-            )
-        with c3:
-            opciones_maquina = ["Todas"] + sorted(df["Maquina"].unique().tolist())
-            f_maquina = st.selectbox(
-                "Máquina",
-                opciones_maquina,
-                key=f"f_maquina_{uid}"
-            )
+        st.download_button(
+            label="📥 Descargar Excel",
+            data=output,
+            file_name="scrap_historial.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
 
-        with c4:
-            opciones_parte = ["Todas"] + sorted(df["Parte"].unique().tolist())
-            f_parte = st.selectbox(
-                "Parte",
-                opciones_parte,
-                key=f"f_parte_{uid}"
-            )
+    with col_b:
+        with st.expander("🔍 Filtros", expanded=True):
+            c1, c2, c3, c4 = st.columns(4)
 
-        if st.button("🧹 Limpiar filtros"):
-            st.session_state.filtro_uid += 1
-            st.rerun()
+            with c1:
+                f_fecha_ini = st.date_input(
+                    "Desde",
+                    value=fecha_min,
+                    key=f"f_fecha_ini_{uid}"
+                )
+
+            with c2:
+                f_fecha_fin = st.date_input(
+                    "Hasta",
+                    value=fecha_max,
+                    key=f"f_fecha_fin_{uid}"
+                )
+
+            with c3:
+                opciones_maquina = ["Todas"] + sorted(df["Maquina"].unique().tolist())
+                f_maquina = st.selectbox(
+                    "Máquina",
+                    opciones_maquina,
+                    key=f"f_maquina_{uid}"
+                )
+
+            with c4:
+                opciones_parte = ["Todas"] + sorted(df["Parte"].unique().tolist())
+                f_parte = st.selectbox(
+                    "Parte",
+                    opciones_parte,
+                    key=f"f_parte_{uid}"
+                )
+
+            if st.button("🧹 Limpiar filtros"):
+                st.session_state.filtro_uid += 1
+                st.rerun()
 
     # ---------- APLICAR FILTROS ----------
     df_f = df.copy()
@@ -808,6 +824,9 @@ font-weight:bold;
 """,
             unsafe_allow_html=True
         )
+        
+
+
     render_footer()
 # ================= GRAFICOS =================
 
