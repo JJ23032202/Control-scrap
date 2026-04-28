@@ -1,15 +1,21 @@
 import os
 from datetime import datetime
 import pandas as pd
-import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
 import io
+from supabase import create_client
+import streamlit as st
+
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # =====================================================
 # CONFIGURACIÓN
 # =====================================================
-
+MODO_CLOUD = True
 st.set_page_config(page_title="Control de Scrap", layout="wide")
 
 st.markdown("""
@@ -222,6 +228,23 @@ def render_footer():
         unsafe_allow_html=True
     )
 
+
+def guardar_scrap_supabase(data: dict):
+    supabase.table("scrap_registrado").insert(data).execute()
+
+
+def leer_scrap_supabase():
+    response = (
+        supabase
+        .table("scrap_registrado")
+        .select("*")
+        .order("fecha", desc=True)
+        .execute()
+    )
+
+    if response.data:
+        return pd.DataFrame(response.data)
+    return pd.DataFrame()
 
 
 # =====================================================
@@ -442,26 +465,13 @@ def escaneo():
             "Parte": st.session_state.parte,
             "Causa": causa,
             "Otra Causa": otra_causa,
-            "Plan Acción": plan,
+            "Plan Accion": plan,
             "Libras": st.session_state.libras,
             "Firma": firma
         }
 
-        try:
-            df = pd.read_excel(EXCEL_PATH, sheet_name="ScrapRegistrado")
-        except:
-            df = pd.DataFrame(columns=data.keys())
 
-        df.loc[len(df)] = data
-
-        with pd.ExcelWriter(
-            EXCEL_PATH,
-            engine="openpyxl",
-            mode="a",
-            if_sheet_exists="replace"
-        ) as writer:
-            df.to_excel(writer, sheet_name="ScrapRegistrado", index=False)
-
+        guardar_scrap_supabase(data)
         if st.session_state.mostrar_guardado:
             aviso = st.empty()
             aviso.success("✅ Scrap guardado correctamente")
@@ -681,22 +691,21 @@ def historial():
 
 
     # ---------- CARGAR DATA ----------
-    try:
-        df = pd.read_excel(EXCEL_PATH, sheet_name="ScrapRegistrado")
-    except:
-        st.warning("No hay historial disponible.")
-        return
+
+    df = leer_scrap_supabase()
 
     if df.empty:
         st.info("Aún no hay registros.")
         return
 
+
     # ---------- NORMALIZAR ----------
-    df["Fecha"] = pd.to_datetime(df["Fecha"], errors="coerce").dt.date
-    df["Maquina"] = df["Maquina"].astype(str).str.strip()
-    df["Parte"] = df["Parte"].astype(str).str.strip()
-    df["Causa"] = df["Causa"].astype(str).str.strip()
-    df["Plan Acción"] = df["Plan Acción"].astype(str).str.strip()
+    df["Fecha"] = pd.to_datetime(df["fecha"]).dt.date
+    df["Maquina"] = df["maquina"]
+    df["Parte"] = df["parte"]
+    df["Causa"] = df["causa"]
+    df["Plan Acción"] = df["plan_accion"]
+    df["Libras"] = pd.to_numeric(df["libras"], errors="coerce").fillna(0)
 
    
     fecha_min = min(df["Fecha"])
@@ -837,11 +846,7 @@ def graficos():
 
 
     # ---------- CARGAR DATA ----------
-    try:
-        df = pd.read_excel(EXCEL_PATH, sheet_name="ScrapRegistrado")
-    except:
-        st.warning("No hay datos para mostrar.")
-        return
+    df = leer_scrap_supabase()
 
     if df.empty:
         st.info("No hay registros.")
