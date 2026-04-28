@@ -131,6 +131,7 @@ def init_state():
         "nuevo_seccion":None,
         "filtro_uid": 0,
         "causa_qr":"",
+        "causa": "",
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -249,7 +250,7 @@ def leer_scrap_supabase():
 
 
 def buscar_causa_por_qr(codigo):
-    df = leer_excel("CausasQR", ["qr", "causa"])
+    df = leer_excel("Causas", ["qr", "causa"])
     fila = df[df["qr"] == codigo]
 
     if fila.empty:
@@ -300,11 +301,9 @@ def escaneo():
    
     codigo = st.text_input(
         "📷 Escanee el código de barras",
-        key=f"scan_{st.session_state.form_uid}",
+        key=f"scan_qr",
         placeholder="Apunte el escáner al código…"
     )
-
-
 
     if codigo and codigo != st.session_state.ultimo_scan:
         st.session_state.ultimo_scan = codigo
@@ -619,7 +618,7 @@ def nuevo():
                 maquinas,
                 key=f"new_parte_maquina_{st.session_state.nuevo_uid}"
             )
-            st.session_state.maquina = maquina
+            st.session_state.maquina = maquina_sel
             numero_parte = st.text_input(
                 "Número de parte",
                 key=f"new_numero_parte_{st.session_state.nuevo_uid}"
