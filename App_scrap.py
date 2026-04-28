@@ -129,7 +129,8 @@ def init_state():
         "nuevo_uid": 0,
         "nuevo_guardado": False,
         "nuevo_seccion":None,
-        "filtro_uid": 0
+        "filtro_uid": 0,
+        "causa_qr":"",
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -247,6 +248,14 @@ def leer_scrap_supabase():
     return pd.DataFrame()
 
 
+def buscar_causa_por_qr(codigo):
+    df = leer_excel("CausasQR", ["qr", "causa"])
+    fila = df[df["qr"] == codigo]
+
+    if fila.empty:
+        return None
+    return fila.iloc[0]["causa"]
+
 # =====================================================
 # MENÚ PRINCIPAL
 # =====================================================
@@ -296,15 +305,16 @@ def escaneo():
     )
 
 
+
     if codigo and codigo != st.session_state.ultimo_scan:
         st.session_state.ultimo_scan = codigo
-        parte, maquina = buscar_parte(codigo)
+        causa_qr = buscar_causa_por_qr(codigo)
 
-        if not parte:
-            st.error("❌ Número de parte no existe")
+        if not causa_qr:
+            st.error("❌ QR no reconocido")
         else:
-            st.session_state.parte = parte
-            st.session_state.maquina = maquina
+            st.session_state.causa_qr = causa_qr
+
 
     # ---------- IMAGEN ----------
     if st.session_state.parte:
@@ -320,21 +330,16 @@ def escaneo():
     col1, col2 = st.columns(2)
 
     with col1:
-        st.text_input("Máquina", value=st.session_state.maquina, disabled=True)
+        st.text_input("Máquina", value=st.session_state.maquina, disabled=False)
 
-        causas = leer_excel("Causas", ["causa"])["causa"].dropna().tolist() + ["Otro"]
-        causa = st.selectbox(
+
+        st.text_input(
             "Causa",
-            causas,
-            key=f"causa_{st.session_state.form_uid}"
+            value=st.session_state.causa_qr,
+            disabled=True
         )
+        causa = st.session_state.causa_qr
 
-        otra_causa = ""
-        if causa == "Otro":
-            otra_causa = st.text_input(
-                "Otra causa",
-                key=f"otra_{st.session_state.form_uid}"
-            )
 
         planes = leer_excel("PlanesAccion", ["plan"])["plan"].dropna().tolist()
         plan = st.selectbox(
@@ -344,7 +349,18 @@ def escaneo():
         )
 
     with col2:
-        st.text_input("Parte", value=st.session_state.parte, disabled=True)
+        partes_df = leer_excel("NumerosParte", ["numero_parte", "maquina"])
+        partes_filtradas = partes_df[
+            partes_df["maquina"] == st.session_state.maquina
+        ]["numero_parte"].dropna().tolist()
+
+        parte = st.selectbox(
+            "Parte",
+            partes_filtradas,
+            key=f"parte_{st.session_state.form_uid}"
+        )
+        st.session_state.parte = parte
+
 
         col_l1, col_l2,  = st.columns([3, 1])
         with col_l1:
@@ -446,9 +462,7 @@ def escaneo():
             st.error("❌ Falta seleccionar causa")
             return
 
-        if causa == "Otro" and not otra_causa:
-            st.error("❌ Falta especificar la otra causa")
-            return
+
 
         if not plan:
             st.error("❌ Falta seleccionar plan de acción")
@@ -464,7 +478,7 @@ def escaneo():
             "Maquina": st.session_state.maquina,
             "Parte": st.session_state.parte,
             "Causa": causa,
-            "Otra Causa": otra_causa,
+
             "Plan Accion": plan,
             "Libras": st.session_state.libras,
             "Firma": firma
@@ -591,7 +605,7 @@ def nuevo():
                 maquinas,
                 key=f"new_parte_maquina_{st.session_state.nuevo_uid}"
             )
-
+            st.session_state.maquina = maquina
             numero_parte = st.text_input(
                 "Número de parte",
                 key=f"new_numero_parte_{st.session_state.nuevo_uid}"
