@@ -124,7 +124,19 @@ hr {
     justify-content: space-between;
     margin-top: 6px;
 }
+</style> 
+<style>
+.footer {
+    position: fixed;
+    bottom: 8px;
+    width: 100%;
+    text-align: center;
+    color: #0B2C4A;
+    font-size: 13px;
+    opacity: 0.75;
+}
 </style>
+
 
 """, unsafe_allow_html=True)
 
@@ -729,6 +741,15 @@ def graficos():
             )
 
         st.pyplot(fig)
+
+st.markdown(
+    """
+    <div class="footer">
+        Desarrollado por <b>Jennifer Valdes</b> · Versigent
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 
 if "pantalla" not in st.session_state:
