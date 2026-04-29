@@ -238,7 +238,7 @@ def guardar_scrap_supabase(data: dict):
 def leer_scrap_supabase():
     response = (
         supabase
-        .table("scrap_registrado")
+        .table("ScrapRegistrado")
         .select("*")
         .order("fecha", desc=True)
         .execute()
