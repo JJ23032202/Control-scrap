@@ -745,7 +745,7 @@ def graficos():
 st.markdown(
     """
     <div class="footer">
-        Desarrollado por <b>Jennifer Valdes</b> · Versigent
+        Desarrollado por <b>Ing. Jennifer Valdes IT OpEx</b> · Versigent
     </div>
     """,
     unsafe_allow_html=True
