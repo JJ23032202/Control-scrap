@@ -456,11 +456,10 @@ def historial():
         if filtro_maquina != "Todas":
             df = df[df["maquina"] == filtro_maquina]
 
+    
     if limpiar:
-        st.session_state.filtro_fechas = (date.today(), date.today())
-        st.session_state.filtro_parte = "Todos"
-        st.session_state.filtro_maquina = "Todas"
         st.rerun()
+
 
     # ===== RENDERIZAR TARJETAS =====
     for i, row in df.iterrows():
@@ -479,18 +478,15 @@ def historial():
             <div class="card {card_class}">
                 <div class="card-row">
                     <div>
-                        <div class="card-title">Máquina:</div>
-                        <div>{row.get("maquina", "")}</div>
+                        <div class="card-title">Máquina:{row.get("maquina", "")}</div>
                         <div><b>Plan de accion:</b> {plan_mostrar}</div>
                     </div>
                     <div>
-                        <div class="card-title"># Parte: </div>
-                        <div>{row.get("parte", "")}</div>
+                        <div class="card-title"># Parte:{row.get("parte", "")}</div>
                         <div><b>Lb:</b> {row.get("libras", "")}</div>
                     </div>
                     <div>
-                        <div class="card-title">Causa: </div>
-                        <div>{row.get("causa", "")}</div></div><b>Fecha:</b> {row.get("fecha", "")}</div>
+                        <div class="card-title"><b>Causa: {row.get("causa", "")}</div></div><b>Fecha:</b> {row.get("fecha", "")}</div>
                     </div>
                 </div>
             </div>
@@ -532,10 +528,11 @@ def historial():
     )
 
 # ================= GRAFICOS =================
+
 def graficos():
     render_header("Graficos")
 
-    # ================= FILTRO DE FECHAS =================
+    # ================= FILTROS =================
     col_cal, col_all, _ = st.columns([2, 2, 6])
 
     with col_cal:
@@ -557,7 +554,7 @@ def graficos():
 
     df["fecha"] = pd.to_datetime(df["fecha"], errors="coerce")
 
-    # ================= APLICAR FILTRO =================
+    # ================= FILTRO POR FECHA =================
     if not ver_todo and rango_fechas and rango_fechas[0] and rango_fechas[1]:
         fecha_inicio, fecha_fin = rango_fechas
         df = df[
@@ -565,11 +562,11 @@ def graficos():
             (df["fecha"].dt.date <= fecha_fin)
         ]
 
-    # ================= LAYOUT 2x2 =================
+    # ================= LAYOUT =================
     col1, col2 = st.columns(2)
     col3, col4 = st.columns(2)
 
-    # ================= GRÁFICA 1: # PARTE =================
+    # ================= # PARTE =================
     with col1:
         st.subheader("#parte")
 
@@ -587,19 +584,18 @@ def graficos():
         ax.set_xlabel("Número de Parte")
         ax.set_ylabel("Cantidad")
 
-        # Valores sobre barras
         for bar in bars:
             ax.text(
                 bar.get_x() + bar.get_width() / 2,
                 bar.get_height(),
-                f"{int(bar.get_height())}",
+                int(bar.get_height()),
                 ha="center",
                 va="bottom"
             )
 
         st.pyplot(fig)
 
-    # ================= GRÁFICA 2: MÁQUINA =================
+    # ================= MÁQUINA =================
     with col2:
         st.subheader("Máquina")
 
@@ -620,17 +616,30 @@ def graficos():
             ax.text(
                 bar.get_width(),
                 bar.get_y() + bar.get_height() / 2,
-                f"{int(bar.get_width())}",
+                int(bar.get_width()),
                 va="center"
             )
 
         st.pyplot(fig)
 
-    # ================= GRÁFICA 3: TIPO DE SCRAP =================
+    # ================= TIPO DE CAUSA =================
     with col3:
         st.subheader("Tipo de causa")
 
-        data = df["causa"].value_counts()
+        causas = (
+            df["causa"]
+            .astype(str)
+            .str.upper()
+            .str.strip()
+            .value_counts()
+        )
+
+        top_n = 5
+        data = causas.head(top_n)
+        otros = causas.iloc[top_n:].sum()
+
+        if otros > 0:
+            data["OTROS"] = otros
 
         fig, ax = plt.subplots()
         ax.pie(
@@ -644,7 +653,7 @@ def graficos():
 
         st.pyplot(fig)
 
-    # ================= GRÁFICA 4: LB POR PARTE =================
+    # ================= LB POR PARTE =================
     with col4:
         st.subheader("Lb por parte")
 
@@ -666,18 +675,12 @@ def graficos():
             ax.text(
                 bar.get_x() + bar.get_width() / 2,
                 bar.get_height(),
-                f"{int(bar.get_height())}",
+                int(bar.get_height()),
                 ha="center",
                 va="bottom"
             )
 
         st.pyplot(fig)
-
-   
-
-
-
-
 
 
 if "pantalla" not in st.session_state:
