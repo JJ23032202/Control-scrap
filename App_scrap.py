@@ -29,6 +29,7 @@ def init_state():
         "firma_sel": "-- Seleccione --",
         "fecha": datetime.now().date(),
         "abrir_teclado": False,
+        "limpiar_form": False
     }
 
     for k, v in defaults.items():
@@ -100,6 +101,17 @@ def menu():
 # ================= ESCANEO =================
 def escaneo():
     render_header("Escaneo de Scrap")
+
+    if st.session_state.limpiar_form:
+        st.session_state.causa_qr = ""
+        st.session_state.maquina_sel = "-- Seleccione --"
+        st.session_state.parte_sel = "-- Seleccione --"
+        st.session_state.plan_sel = "-- Seleccione --"
+        st.session_state.otro_texto = ""
+        st.session_state.libras = ""
+        st.session_state.firma_sel = "-- Seleccione --"
+        st.session_state.fecha = datetime.now().date()
+        st.session_state.limpiar_form = False
 
     # ================= ESCANEAR QR =================
     if st.button("🔍 Escanear", use_container_width=True):
@@ -216,7 +228,7 @@ def escaneo():
 
         st.success("✅ Scrap guardado correctamente")
 
-        # ✅ SOLO rerun, SIN reset manual
+        st.session_state.limpiar_form = True
         st.rerun()
 
 
