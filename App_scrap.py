@@ -299,8 +299,9 @@ def nuevo():
             st.success("OK")
 
 # ================= HISTORIAL =================
+
 def historial():
-    render_header("Historial")
+    st.header("📊 Historial")
 
     df = leer_tabla("scrap_registrado")
 
@@ -308,14 +309,42 @@ def historial():
         st.info("Sin registros")
         return
 
+    # 🔹 ORDENAR COLUMNAS PARA EL EXCEL
+    columnas_ordenadas = [
+        "fecha",
+        "maquina",
+        "parte",
+        "causa",
+        "plan_accion",   # ✅ primero plan de acción
+        "otra_causa",    # ✅ luego detalle OTRO
+        "libras",
+        "firma"
+    ]
+
+    # Mantener solo las columnas que existan
+    columnas_ordenadas = [c for c in columnas_ordenadas if c in df.columns]
+    df = df[columnas_ordenadas]
+
+    # CAMBIAR NOMBRE SOLO PARA EXCEL
+    df = df.rename(columns={
+        "otra_causa": "otro_plan"
+    })
+
+    # Mostrar en pantalla
     st.dataframe(df)
 
-    # descargar
+    # Descargar Excel
     output = io.BytesIO()
     df.to_excel(output, index=False)
     output.seek(0)
 
-    st.download_button("Descargar Excel", output, "historial.xlsx")
+    st.download_button(
+        "📥 Descargar Excel",
+        data=output,
+        file_name="historial_scrap.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
 
 # ================= GRAFICOS =================
 def graficos():
