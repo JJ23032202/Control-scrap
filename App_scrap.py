@@ -28,6 +28,7 @@ def init_state():
         "libras": "",
         "firma_sel": "",
         "fecha": datetime.now().date(),
+        "abrir_teclado": False,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -96,28 +97,37 @@ def menu():
             st.session_state.pantalla = "graficos"
 
 # ================= ESCANEO =================
+
 def escaneo():
     render_header("Escaneo de Scrap")
 
-    # ================= ESCANEAR =================
+    # ================= BOTÓN ESCANEAR =================
     if st.button("🔍 Escanear", use_container_width=True):
         st.session_state.modo_scan = True
         st.session_state.causa_qr = ""
         st.session_state._qr_tmp = ""
 
-    # === QR SOLO EXISTE EN MODO ESCANEO ===
+    # ===== INPUT QR (SOLO EXISTE MIENTRAS SE ESCANEA) =====
     if st.session_state.modo_scan:
-        qr = st.text_input("", key="_qr_tmp", placeholder="Escanee QR…")
+        qr = st.text_input(
+            "",
+            key="_qr_tmp",
+            placeholder="Escanee QR…",
+            label_visibility="collapsed"
+        )
         if qr:
             st.session_state.causa_qr = qr.strip()
             st.session_state.modo_scan = False
-            st.rerun()  # 🔥 CLAVE: mata el input QR
+            st.rerun()  # <-- CLAVE: elimina el input QR y evita escritura en selectbox
 
     # ================= CAUSA =================
-    st.text_input("Causa", value=st.session_state.causa_qr, disabled=True)
+    st.text_input(
+        "Causa",
+        value=st.session_state.causa_qr,
+        disabled=True
+    )
 
     escaneado = bool(st.session_state.causa_qr)
-
     st.divider()
 
     # ================= CATÁLOGOS =================
@@ -130,48 +140,57 @@ def escaneo():
     c1, c2 = st.columns(2)
 
     with c1:
-        maquinas = df_maquinas["nombre_maquina"].tolist()
-        st.session_state.maquina_sel = st.selectbox(
-            "Máquina",
+        maquinas = df_maquinas["nombre_maquina"].dropna().tolist()
+        st.selectbox(
+            "Seleccionar Máquina",
             maquinas,
-            disabled=not escaneado,
-            key="maquina_sel"
+            key="maquina_sel",
+            disabled=not escaneado
         )
 
     with c2:
         partes = []
         if st.session_state.maquina_sel:
-            partes = df_partes[
-                df_partes["maquina"] == st.session_state.maquina_sel
-            ]["numero_parte"].tolist()
+            partes = (
+                df_partes[
+                    df_partes["maquina"] == st.session_state.maquina_sel
+                ]["numero_parte"]
+                .dropna()
+                .tolist()
+            )
 
-        st.session_state.parte_sel = st.selectbox(
-            "Número de Parte",
+        st.selectbox(
+            "Seleccionar Número de Parte",
             partes,
-            disabled=not st.session_state.maquina_sel,
-            key="parte_sel"
+            key="parte_sel",
+            disabled=not st.session_state.maquina_sel
         )
 
     # ================= FILA 4 =================
     c3, c4 = st.columns(2)
 
     with c3:
-        planes = df_planes["plan"].tolist()
-        st.session_state.plan_sel = st.selectbox(
-            "Plan de acción",
+        planes = df_planes["plan"].dropna().tolist()
+        st.selectbox(
+            "Seleccionar Plan de acción",
             planes,
-            disabled=not escaneado,
-            key="plan_sel"
+            key="plan_sel",
+            disabled=not escaneado
         )
 
-        st.session_state.otro_texto = st.text_input(
+        st.text_input(
             "Colocar otro",
-            disabled=st.session_state.plan_sel != "Otro",
-            key="otro_texto"
+            key="otro_texto",
+            disabled=st.session_state.plan_sel != "Otro"
         )
 
     with c4:
-        st.text_input("Libras", value=st.session_state.libras, disabled=True)
+        st.text_input(
+            "Colocar Libras",
+            value=st.session_state.libras,
+            disabled=True
+        )
+
         if st.button("⌨️", disabled=not escaneado):
             st.session_state.abrir_teclado = True
 
@@ -181,19 +200,23 @@ def escaneo():
     with c5:
         firmas = []
         if st.session_state.maquina_sel:
-            firmas = df_maquinistas[
-                df_maquinistas["maquina"] == st.session_state.maquina_sel
-            ]["nombre"].tolist()
+            firmas = (
+                df_maquinistas[
+                    df_maquinistas["maquina"] == st.session_state.maquina_sel
+                ]["nombre"]
+                .dropna()
+                .tolist()
+            )
 
-        st.session_state.firma_sel = st.selectbox(
-            "Maquinista",
+        st.selectbox(
+            "Seleccionar maquinista",
             firmas,
-            disabled=not st.session_state.maquina_sel,
-            key="firma_sel"
+            key="firma_sel",
+            disabled=not st.session_state.maquina_sel
         )
 
     with c6:
-        st.session_state.fecha = st.date_input("Fecha", st.session_state.fecha)
+        st.date_input("Seleccionar Fecha", key="fecha")
 
     st.divider()
 
@@ -214,7 +237,7 @@ def escaneo():
             st.session_state.libras,
             st.session_state.firma_sel
         ]):
-            st.error("❌ Faltan datos")
+            st.error("❌ Faltan datos obligatorios")
             return
 
         insertar_tabla("scrap_registrado", {
@@ -227,18 +250,19 @@ def escaneo():
             "firma": st.session_state.firma_sel,
         })
 
-        st.success("✅ Guardado")
+        st.success("✅ Scrap guardado correctamente")
 
         # ===== RESET TOTAL =====
         for k in [
-            "causa_qr","maquina_sel","parte_sel","plan_sel",
-            "otro_texto","libras","firma_sel"
+            "causa_qr", "maquina_sel", "parte_sel",
+            "plan_sel", "otro_texto",
+            "libras", "firma_sel"
         ]:
             st.session_state[k] = ""
 
         st.session_state.fecha = datetime.now().date()
+        st.session_state.modo_scan = False
         st.rerun()
-
 
 # ================= NUEVO =================
 def nuevo():
