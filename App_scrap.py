@@ -235,17 +235,14 @@ def guardar_scrap_supabase(data: dict):
     supabase.table("ScrapRegistrado").insert(data).execute()
 
 def leer_scrap_supabase():
-    response = (
-        supabase
-        .table("ScrapRegistrado")
-        .select("*")
-        .execute()
-    )
-
-    if response.data:
-        return pd.DataFrame(response.data)
-    return pd.DataFrame()
-
+    try:
+        response = supabase.table("ScrapRegistrado").select("*").execute()
+        return pd.DataFrame(response.data) if response.data else pd.DataFrame()
+    except Exception as e:
+        import streamlit as st
+        st.error(f"Error real: {e}")
+        raise e
+    
 def buscar_causa_por_qr(codigo):
     df = leer_excel("Causas", ["qr", "causa"])
     fila = df[df["qr"] == codigo]
@@ -484,13 +481,13 @@ def escaneo():
 
         # --- Guardado ---
         data = {
-            "Fecha": st.session_state.fecha.strftime("%d/%m/%Y"),
+            "Fecha": str(st.session_state.fecha),
             "Maquina": st.session_state.maquina,
             "Parte": st.session_state.parte,
             "Causa": causa,
 
-            "Plan Accion": plan,
-            "Libras": st.session_state.libras,
+            "Plan_Accion": plan,
+            "Libras": float(st.session_state.libras),
             "Firma": firma
         }
 
@@ -728,7 +725,7 @@ def historial():
     df["Maquina"] = df["Maquina"]
     df["Parte"] = df["Parte"]
     df["Causa"] = df["Causa"]
-    df["Plan Acción"] = df["Plan Accion"]
+    df["Plan_Accion"] = df["Plan_Accion"]
     df["Libras"] = pd.to_numeric(df["Libras"], errors="coerce").fillna(0)
 
 
