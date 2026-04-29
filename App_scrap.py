@@ -98,11 +98,10 @@ def menu():
             st.session_state.pantalla = "graficos"
 
 # ================= ESCANEO =================
-
 def escaneo():
     render_header("Escaneo de Scrap")
 
-    # ========= ESCANEAR QR =========
+    # ================= ESCANEAR QR =================
     if st.button("🔍 Escanear", use_container_width=True):
         st.session_state.modo_scan = True
         st.session_state.causa_qr = ""
@@ -123,97 +122,101 @@ def escaneo():
     st.text_input("Causa", st.session_state.causa_qr, disabled=True)
     st.divider()
 
-    # ========= CARGA DE TABLAS =========
+    # ================= CARGA DE TABLAS =================
     df_maquinas = leer_tabla("maquinas")
     df_partes = leer_tabla("numeros_parte")
     df_planes = leer_tabla("planes_accion")
     df_maquinistas = leer_tabla("maquinistas")
 
+    # ===== MAPEO nombre -> id =====
     map_maquinas = dict(
         zip(df_maquinas["nombre_maquina"], df_maquinas["id"])
     )
 
-    # =============== FORM =================
-    with st.form("form_scrap", clear_on_submit=True):
+    # ================= FILA 3 =================
+    col1, col2 = st.columns(2)
 
-        col1, col2 = st.columns(2)
+    with col1:
+        maquinas = ["-- Seleccione --"] + df_maquinas["nombre_maquina"].dropna().tolist()
+        st.selectbox("Máquina", maquinas, key="maquina_sel")
 
-        with col1:
-            maquinas = ["-- Seleccione --"] + df_maquinas["nombre_maquina"].dropna().tolist()
-            maquina_sel = st.selectbox("Máquina", maquinas)
+    maquina_id = map_maquinas.get(st.session_state.maquina_sel)
 
-        maquina_id = map_maquinas.get(maquina_sel)
+    with col2:
+        partes = ["-- Seleccione --"]
+        if maquina_id is not None:
+            partes += df_partes[
+                df_partes["maquina"] == maquina_id
+            ]["numero_parte"].dropna().tolist()
 
-        with col2:
-            partes = ["-- Seleccione --"]
-            if maquina_id is not None:
-                partes += df_partes[
-                    df_partes["maquina"] == maquina_id
-                ]["numero_parte"].dropna().tolist()
+        st.selectbox("Número de parte", partes, key="parte_sel")
 
-            parte_sel = st.selectbox("Número de parte", partes)
+    # ================= FILA 4 =================
+    col3, col4 = st.columns(2)
 
-        col3, col4 = st.columns(2)
+    with col3:
+        planes = ["-- Seleccione --"] + df_planes["plan"].dropna().tolist()
+        st.selectbox("Plan de acción", planes, key="plan_sel")
 
-        with col3:
-            planes = ["-- Seleccione --"] + df_planes["plan"].dropna().tolist()
-            plan_sel = st.selectbox("Plan de acción", planes)
+        st.text_input(
+            "Colocar otro",
+            key="otro_texto",
+            disabled=st.session_state.plan_sel.upper() != "OTRO"
+        )
 
-            otro_texto = st.text_input(
-                "Colocar otro",
-                disabled=plan_sel.upper() != "OTRO"
-            )
+    with col4:
+        st.text_input("Libras", key="libras")
 
-        with col4:
-            libras = st.text_input("Libras")
+    # ================= FILA 5 =================
+    col5, col6 = st.columns(2)
 
-        col5, col6 = st.columns(2)
+    with col5:
+        firmas = ["-- Seleccione --"]
+        if maquina_id is not None:
+            firmas += df_maquinistas[
+                df_maquinistas["maquina"] == maquina_id
+            ]["nombre"].dropna().tolist()
 
-        with col5:
-            firmas = ["-- Seleccione --"]
-            if maquina_id is not None:
-                firmas += df_maquinistas[
-                    df_maquinistas["maquina"] == maquina_id
-                ]["nombre"].dropna().tolist()
+        st.selectbox("Maquinista", firmas, key="firma_sel")
 
-            firma_sel = st.selectbox("Maquinista", firmas)
+    with col6:
+        st.date_input("Fecha", key="fecha")
 
-        with col6:
-            fecha = st.date_input("Fecha")
+    st.divider()
 
-        submitted = st.form_submit_button("Guardar")
-
-    # ========= GUARDAR =========
-    if submitted:
+    # ================= GUARDAR =================
+    if st.button("Guardar", use_container_width=True):
 
         causa_final = (
-            otro_texto if plan_sel.upper() == "OTRO" else st.session_state.causa_qr
+            st.session_state.otro_texto
+            if st.session_state.plan_sel.upper() == "OTRO"
+            else st.session_state.causa_qr
         )
 
         if (
             causa_final == ""
-            or maquina_sel == "-- Seleccione --"
-            or parte_sel == "-- Seleccione --"
-            or plan_sel == "-- Seleccione --"
-            or firma_sel == "-- Seleccione --"
-            or libras == ""
+            or st.session_state.maquina_sel == "-- Seleccione --"
+            or st.session_state.parte_sel == "-- Seleccione --"
+            or st.session_state.plan_sel == "-- Seleccione --"
+            or st.session_state.firma_sel == "-- Seleccione --"
+            or st.session_state.libras == ""
         ):
             st.error("❌ Faltan datos obligatorios")
             return
 
         insertar_tabla("scrap_registrado", {
-            "fecha": str(fecha),
+            "fecha": str(st.session_state.fecha),
             "maquina": maquina_id,
-            "parte": parte_sel,
+            "parte": st.session_state.parte_sel,
             "causa": causa_final,
-            "plan_accion": plan_sel,
-            "libras": float(libras),
-            "firma": firma_sel,
+            "plan_accion": st.session_state.plan_sel,
+            "libras": float(st.session_state.libras),
+            "firma": st.session_state.firma_sel,
         })
 
         st.success("✅ Scrap guardado correctamente")
 
-
+        # ✅ SOLO rerun, SIN reset manual
         st.rerun()
 
 
