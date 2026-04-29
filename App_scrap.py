@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+from datetime import date
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,11 +8,12 @@ import io
 from supabase import create_client
 import streamlit as st
 
+
 st.markdown("""
 <style>
 /* ===== BACKGROUND GENERAL ===== */
 .stApp {
-    background-color: #F2F2F2;
+    background-color: #061A2C;
 }
 
 /* ===== HEADER ===== */
@@ -22,7 +24,7 @@ st.markdown("""
 }
 
 .header-title {
-    color: #E36B2C;
+    color: #0F2A44;
     font-weight: bold;
     text-align: center;
 }
@@ -62,7 +64,7 @@ div[data-baseweb="select"] > div {
 
 /* Texto dentro del selectbox */
 div[data-baseweb="select"] span {
-    color: #0B2C4A !important;
+    color: #0F2A44 !important;
     font-weight: 600;
 }
 
@@ -408,9 +410,10 @@ def historial():
     with col_f1:
         fecha_rango = st.date_input(
             "Calendario",
-            value=(None, None),
+            value=(date.today(), date.today()),
             key="filtro_fechas"
         )
+
 
     with col_f2:
         df_partes = leer_tabla("numeros_parte")
@@ -538,7 +541,11 @@ def graficos():
     # Calendario
     col_cal, _ = st.columns([2, 8])
     with col_cal:
-        rango_fechas = st.date_input("Calendario", value=(None, None))
+        rango_fechas = st.date_input(
+            "Calendario",
+            value=(date.today(), date.today())
+        )
+
 
     df = leer_tabla("scrap_registrado")
     if df.empty:
