@@ -234,20 +234,17 @@ def render_footer():
 def guardar_scrap_supabase(data: dict):
     supabase.table("ScrapRegistrado").insert(data).execute()
 
-
 def leer_scrap_supabase():
     response = (
         supabase
         .table("ScrapRegistrado")
         .select("*")
-        .order("Fecha", desc=True)
         .execute()
     )
 
     if response.data:
         return pd.DataFrame(response.data)
     return pd.DataFrame()
-
 
 def buscar_causa_por_qr(codigo):
     df = leer_excel("Causas", ["qr", "causa"])
@@ -727,12 +724,13 @@ def historial():
 
 
     # ---------- NORMALIZAR ----------
-    df["Fecha"] = pd.to_datetime(df["fecha"]).dt.date
-    df["Maquina"] = df["maquina"]
-    df["Parte"] = df["parte"]
-    df["Causa"] = df["causa"]
-    df["Plan Acción"] = df["plan_accion"]
-    df["Libras"] = pd.to_numeric(df["libras"], errors="coerce").fillna(0)
+    df["Fecha"] = pd.to_datetime(df["Fecha"]).dt.date
+    df["Maquina"] = df["Maquina"]
+    df["Parte"] = df["Parte"]
+    df["Causa"] = df["Causa"]
+    df["Plan Acción"] = df["Plan Accion"]
+    df["Libras"] = pd.to_numeric(df["Libras"], errors="coerce").fillna(0)
+
 
    
     fecha_min = min(df["Fecha"])
