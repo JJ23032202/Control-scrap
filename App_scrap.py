@@ -623,9 +623,12 @@ def graficos():
         st.pyplot(fig)
 
     # ================= TIPO DE CAUSA =================
+
+# ================= TIPO DE CAUSA (BARRAS) =================
     with col3:
         st.subheader("Tipo de causa")
-
+    
+        # Normalizar texto de causa
         causas = (
             df["causa"]
             .astype(str)
@@ -633,25 +636,37 @@ def graficos():
             .str.strip()
             .value_counts()
         )
-
+    
+        # Top causas + otros
         top_n = 5
         data = causas.head(top_n)
         otros = causas.iloc[top_n:].sum()
-
+    
         if otros > 0:
             data["OTROS"] = otros
-
+    
         fig, ax = plt.subplots()
-        ax.pie(
-            data.values,
-            labels=data.index,
-            startangle=90,
-            autopct="%d",
-            wedgeprops=dict(width=0.4)
-        )
-        ax.axis("equal")
-
+        bars = ax.bar(data.index, data.values, color="#1E6F1C")
+    
+        ax.set_title("Tipo de causa")
+        ax.set_xlabel("Causa")
+        ax.set_ylabel("Cantidad")
+    
+        # Rotar etiquetas del eje X
+        plt.xticks(rotation=30, ha="right")
+    
+        # Valores encima de barras
+        for bar in bars:
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                bar.get_height(),
+                int(bar.get_height()),
+                ha="center",
+                va="bottom"
+            )
+    
         st.pyplot(fig)
+
 
     # ================= LB POR PARTE =================
     with col4:
