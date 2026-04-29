@@ -196,32 +196,37 @@ def escaneo():
 
     st.divider()
 
-    # ================= GUARDAR =================
+   
+# ================= GUARDAR =================
     if st.button("Guardar", use_container_width=True):
 
-        causa_final = (
-            st.session_state.otro_texto
-            if st.session_state.plan_sel.upper() == "OTRO"
-            else st.session_state.causa_qr
-        )
+        # ----- PLAN FINAL -----
+        if st.session_state.plan_sel.upper() == "OTRO":
+            plan_final = st.session_state.otro_texto.strip()
+            if not plan_final:
+                st.error("❌ Debe capturar el plan de acción en 'Colocar otro'")
+                return
+        else:
+            plan_final = st.session_state.plan_sel
 
+        # ----- VALIDACIONES GENERALES -----
         if (
-            causa_final == ""
+            st.session_state.causa_qr == ""
             or st.session_state.maquina_sel == "-- Seleccione --"
             or st.session_state.parte_sel == "-- Seleccione --"
-            or st.session_state.plan_sel == "-- Seleccione --"
             or st.session_state.firma_sel == "-- Seleccione --"
             or st.session_state.libras == ""
         ):
             st.error("❌ Faltan datos obligatorios")
             return
 
+        # ----- INSERT -----
         insertar_tabla("scrap_registrado", {
             "fecha": str(st.session_state.fecha),
-            "maquina": maquina_id,
+            "maquina": maquina_id,          # ID numérico
             "parte": st.session_state.parte_sel,
-            "causa": causa_final,
-            "plan_accion": st.session_state.plan_sel,
+            "causa": st.session_state.causa_qr,
+            "plan_accion": plan_final,      # ✅ PLAN CORRECTO
             "libras": float(st.session_state.libras),
             "firma": st.session_state.firma_sel,
         })
@@ -230,6 +235,7 @@ def escaneo():
 
         st.session_state.limpiar_form = True
         st.rerun()
+
 
 
 
