@@ -53,7 +53,7 @@ def insertar_tabla(tabla, data):
         st.error(f"Error insertando en {tabla}: {e}")
 
 def guardar_scrap(data):
-    insertar_tabla("ScrapRegistrado", data)
+    insertar_tabla("scrap_registrado", data)
 
 # ================= HEADER =================
 def render_header(titulo):
@@ -182,7 +182,7 @@ def nuevo():
 def historial():
     render_header("Historial")
 
-    df = leer_tabla("ScrapRegistrado")
+    df = leer_tabla("scrap_registrado")
 
     if df.empty:
         st.info("Sin datos")
@@ -206,7 +206,7 @@ def historial():
 def graficos():
     render_header("Gráficos")
 
-    df = leer_tabla("ScrapRegistrado")
+    df = leer_tabla("scrap_registrado")
 
     if df.empty:
         st.info("Sin datos")
