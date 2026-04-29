@@ -7,6 +7,109 @@ import io
 from supabase import create_client
 import streamlit as st
 
+st.markdown("""
+<style>
+/* ===== BACKGROUND GENERAL ===== */
+.stApp {
+    background-color: #F2F2F2;
+}
+
+/* ===== HEADER ===== */
+.header-bar {
+    background-color: #0B2C4A;
+    padding: 10px 20px;
+    border-radius: 8px;
+}
+
+.header-title {
+    color: #E36B2C;
+    font-weight: bold;
+    text-align: center;
+}
+
+/* ===== BOTÓN REGRESAR ===== */
+button[kind="secondary"] {
+    background-color: #E36B2C !important;
+    color: white !important;
+    border-radius: 8px;
+    font-weight: bold;
+}
+
+/* ===== BOTONES PRINCIPALES ===== */
+.stButton > button {
+    background-color: #E36B2C;
+    color: white;
+    border-radius: 10px;
+    font-weight: bold;
+    height: 48px;
+}
+
+.stButton > button:hover {
+    background-color: #cf5f25;
+    color: white;
+}
+
+/* ===== INPUTS y SELECTBOX ===== */
+input, textarea {
+    border-radius: 8px !important;
+}
+
+div[data-baseweb="select"] > div {
+    border-radius: 8px;
+    background-color: #0B2C4A10;
+    border: 1px solid #0B2C4A;
+}
+
+/* Texto dentro del selectbox */
+div[data-baseweb="select"] span {
+    color: #0B2C4A !important;
+    font-weight: 600;
+}
+
+/* ===== LABELS ===== */
+label {
+    color: #E36B2C !important;
+    font-weight: bold;
+}
+
+/* ===== DIVIDER ===== */
+hr {
+    border-top: 2px solid #E36B2C;
+}
+</style>
+            
+
+<style>
+.card {
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 12px;
+    color: white;
+    font-size: 16px;
+}
+
+.card-blue {
+    background-color: #0B2C4A;
+}
+
+.card-orange {
+    background-color: #E36B2C;
+}
+
+.card-title {
+    font-weight: bold;
+    font-size: 18px;
+}
+
+.card-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+}
+</style>
+
+""", unsafe_allow_html=True)
+
 # ================= SUPABASE =================
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
@@ -57,19 +160,19 @@ def insertar_tabla(tabla, data):
         st.error(f"Error insertando en {tabla}: {e}")
 
 # ================= HEADER =================
-
 def render_header(titulo):
-    col1, col2, col3 = st.columns([1, 6, 1])
+    col1, col2, col3 = st.columns([1, 6, 2])
 
     with col1:
-        if st.button("⬅️"):
+        if st.button("⬅ Regresar"):
             st.session_state.pantalla = "menu"
             st.rerun()
 
     with col2:
         st.markdown(
-            f"<h2 style='text-align:center; color:#E36B2C;'>{titulo}</h2>",
+            f"<h2 class='header-title'>{titulo}</h2>",
             unsafe_allow_html=True
+
         )
 
     with col3:
@@ -239,10 +342,6 @@ def escaneo():
         st.session_state.limpiar_form = True
         st.rerun()
 
-
-
-
-
 # ================= NUEVO =================
 def nuevo():
     render_header("Nuevo")
@@ -301,13 +400,100 @@ def nuevo():
 # ================= HISTORIAL =================
 
 def historial():
-    st.header("📊 Historial")
+    render_header("Historial")
+
+    # ================= FILTROS =================
+    col_f1, col_f2, col_f3, col_f4, col_f5 = st.columns([2, 2, 2, 1.5, 2])
+
+    with col_f1:
+        fecha_rango = st.date_input(
+            "Calendario",
+            value=(None, None),
+            key="filtro_fechas"
+        )
+
+    with col_f2:
+        df_partes = leer_tabla("numeros_parte")
+        partes = ["Todos"] + sorted(df_partes["numero_parte"].dropna().unique().tolist())
+        filtro_parte = st.selectbox("Num parte", partes, key="filtro_parte")
+
+    with col_f3:
+        df_maquinas = leer_tabla("maquinas")
+        maquinas = ["Todas"] + sorted(df_maquinas["nombre_maquina"].dropna().unique().tolist())
+        filtro_maquina = st.selectbox("Maquina", maquinas, key="filtro_maquina")
+
+    with col_f4:
+        aplicar = st.button("Filtrar")
+
+    with col_f5:
+        limpiar = st.button("Limpiar filtros")
 
     df = leer_tabla("scrap_registrado")
 
     if df.empty:
         st.info("Sin registros")
         return
+    df["fecha"] = pd.to_datetime(df["fecha"])
+
+    if aplicar:
+
+        # ---- FECHAS ----
+        if fecha_rango and fecha_rango[0] and fecha_rango[1]:
+            df["fecha"] = pd.to_datetime(df["fecha"])
+            df = df[
+                (df["fecha"].dt.date >= fecha_rango[0]) &
+                (df["fecha"].dt.date <= fecha_rango[1])
+            ]
+
+        # ---- NUM PARTE ----
+        if filtro_parte != "Todos":
+            df = df[df["parte"] == filtro_parte]
+
+        # ---- MAQUINA ----
+        if filtro_maquina != "Todas":
+            df = df[df["maquina"] == filtro_maquina]
+
+    if limpiar:
+        st.session_state.filtro_fechas = (None, None)
+        st.session_state.filtro_parte = "Todos"
+        st.session_state.filtro_maquina = "Todas"
+        st.rerun()
+
+    # ===== RENDERIZAR TARJETAS =====
+    for i, row in df.iterrows():
+
+        # Alternar colores
+        card_class = "card-blue" if i % 2 == 0 else "card-orange"
+
+        # Plan mostrado
+        if row.get("plan_accion", "").lower() == "otro" and pd.notna(row.get("otra_causa")):
+            plan_mostrar = f"OTRO - {row['otra_causa']}"
+        else:
+            plan_mostrar = row.get("plan_accion", "")
+
+        st.markdown(
+            f"""
+            <div class="card {card_class}">
+                <div class="card-row">
+                    <div>
+                        <div class="card-title">Máquina</div>
+                        <div>{row.get("maquina", "")}</div>
+                        <div><b>Plan:</b> {plan_mostrar}</div>
+                    </div>
+                    <div>
+                        <div class="card-title"># Parte</div>
+                        <div>{row.get("parte", "")}</div>
+                        <div><b>Lb:</b> {row.get("libras", "")}</div>
+                    </div>
+                    <div>
+                        <div class="card-title">Causa</div>
+                        <div>{row.get("causa", "")}</div>
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
     # 🔹 ORDENAR COLUMNAS PARA EL EXCEL
     columnas_ordenadas = [
@@ -315,8 +501,8 @@ def historial():
         "maquina",
         "parte",
         "causa",
-        "plan_accion",   # ✅ primero plan de acción
-        "otra_causa",    # ✅ luego detalle OTRO
+        "plan_accion",   # primero plan de acción
+        "otra_causa",    #  luego detalle OTRO
         "libras",
         "firma"
     ]
@@ -345,26 +531,65 @@ def historial():
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
-
 # ================= GRAFICOS =================
 def graficos():
-    render_header("Gráficos")
+    render_header("Graficos")
+
+    # Calendario
+    col_cal, _ = st.columns([2, 8])
+    with col_cal:
+        rango_fechas = st.date_input("Calendario", value=(None, None))
 
     df = leer_tabla("scrap_registrado")
-
     if df.empty:
         st.info("Sin datos")
         return
 
-    df["libras"] = pd.to_numeric(df["libras"], errors="coerce").fillna(0)
+    df["fecha"] = pd.to_datetime(df["fecha"], errors="coerce")
 
-    top = df.groupby("parte").size().sort_values(ascending=False).head(5)
+    if rango_fechas and rango_fechas[0] and rango_fechas[1]:
+        df = df[
+            (df["fecha"].dt.date >= rango_fechas[0]) &
+            (df["fecha"].dt.date <= rango_fechas[1])
+        ]
 
-    fig, ax = plt.subplots()
-    ax.bar(top.index, top.values)
-    plt.xticks(rotation=45)
+    col1, col2 = st.columns(2)
+    col3, col4 = st.columns(2)
 
-    st.pyplot(fig)
+    with col1:
+        st.subheader("#parte")
+        data = df.groupby("parte").size().head(6)
+        fig, ax = plt.subplots()
+        ax.bar(data.index, data.values)
+        st.pyplot(fig)
+
+    with col2:
+        st.subheader("maquina")
+        data = df.groupby("maquina").size().head(6)
+        fig, ax = plt.subplots()
+        ax.barh(data.index, data.values)
+        st.pyplot(fig)
+
+    with col3:
+        st.subheader("Tipo de scrap")
+        data = df["plan_accion"].value_counts()
+        fig, ax = plt.subplots()
+        ax.pie(data.values, labels=data.index,
+               wedgeprops=dict(width=0.4))
+        ax.axis("equal")
+        st.pyplot(fig)
+
+    with col4:
+        st.subheader("$/Lb")
+        data = df.groupby("parte")["libras"].sum().head(6)
+        fig, ax = plt.subplots()
+        ax.bar(data.index, data.values)
+        st.pyplot(fig)
+
+   
+
+
+
 
 
 
