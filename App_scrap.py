@@ -17,17 +17,19 @@ st.set_page_config(page_title="Control de Scrap", layout="wide")
 
 # ================= SESSION =================
 def init_state():
+    
     defaults = {
-        "pantalla": "menu",
-        "parte": "",
-        "maquina": "",
-        "libras": "",
-        "fecha": datetime.now().date(),
         "modo_scan": False,
-        "qr_buffer": "",
         "causa_qr": "",
-
+        "maquina_sel": "",
+        "parte_sel": "",
+        "plan_sel": "",
+        "otro_texto": "",
+        "libras": "",
+        "firma_sel": "",
+        "fecha": datetime.now().date(),
     }
+
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
@@ -94,151 +96,149 @@ def menu():
             st.session_state.pantalla = "graficos"
 
 # ================= ESCANEO =================
-
 def escaneo():
     render_header("Escaneo de Scrap")
 
-    # ========= BOTÓN ESCANEAR =========
+    # ================= ESCANEAR =================
     if st.button("🔍 Escanear", use_container_width=True):
         st.session_state.modo_scan = True
         st.session_state.causa_qr = ""
-        st.session_state.qr_input = ""
+        st.session_state._qr_tmp = ""
 
-    # ========= INPUT QR (SOLO AQUÍ RECIBE TEXTO) =========
+    # === QR SOLO EXISTE EN MODO ESCANEO ===
     if st.session_state.modo_scan:
-        qr = st.text_input(
-            "QR",
-            key="qr_input",
-            label_visibility="collapsed"
-        )
+        qr = st.text_input("", key="_qr_tmp", placeholder="Escanee QR…")
         if qr:
             st.session_state.causa_qr = qr.strip()
             st.session_state.modo_scan = False
+            st.rerun()  # 🔥 CLAVE: mata el input QR
 
-    # ========= CAUSA =========
-    st.text_input(
-        "Causa",
-        value=st.session_state.causa_qr,
-        disabled=True
-    )
+    # ================= CAUSA =================
+    st.text_input("Causa", value=st.session_state.causa_qr, disabled=True)
+
+    escaneado = bool(st.session_state.causa_qr)
 
     st.divider()
 
-    # ========= CARGA DE CATÁLOGOS =========
+    # ================= CATÁLOGOS =================
     df_maquinas = leer_tabla("maquinas")
     df_partes = leer_tabla("numeros_parte")
     df_planes = leer_tabla("planes_accion")
     df_maquinistas = leer_tabla("maquinistas")
 
-    causa_ok = bool(st.session_state.causa_qr)
+    # ================= FILA 3 =================
+    c1, c2 = st.columns(2)
 
-    # ========= FILA 3 =========
-    col1, col2 = st.columns(2)
-
-    with col1:
-        maquinas = df_maquinas["nombre_maquina"].dropna().tolist()
-        maquina = st.selectbox(
-            "Seleccionar Máquina",
+    with c1:
+        maquinas = df_maquinas["nombre_maquina"].tolist()
+        st.session_state.maquina_sel = st.selectbox(
+            "Máquina",
             maquinas,
-            disabled=not causa_ok
+            disabled=not escaneado,
+            key="maquina_sel"
         )
 
-    with col2:
+    with c2:
         partes = []
-        if maquina:
-            partes = df_partes[df_partes["maquina"] == maquina]["numero_parte"].tolist()
+        if st.session_state.maquina_sel:
+            partes = df_partes[
+                df_partes["maquina"] == st.session_state.maquina_sel
+            ]["numero_parte"].tolist()
 
-        parte = st.selectbox(
-            "Seleccionar Número de Parte",
+        st.session_state.parte_sel = st.selectbox(
+            "Número de Parte",
             partes,
-            disabled=not maquina
+            disabled=not st.session_state.maquina_sel,
+            key="parte_sel"
         )
 
-    # ========= FILA 4 =========
-    col3, col4 = st.columns(2)
+    # ================= FILA 4 =================
+    c3, c4 = st.columns(2)
 
-    with col3:
-        planes = df_planes["plan"].dropna().tolist()
-        plan = st.selectbox(
-            "Seleccionar Plan de acción",
+    with c3:
+        planes = df_planes["plan"].tolist()
+        st.session_state.plan_sel = st.selectbox(
+            "Plan de acción",
             planes,
-            disabled=not causa_ok
+            disabled=not escaneado,
+            key="plan_sel"
         )
 
-        otro_habilitado = (plan == "Otro")
-
-        causa_manual = st.text_input(
+        st.session_state.otro_texto = st.text_input(
             "Colocar otro",
-            disabled=not otro_habilitado
+            disabled=st.session_state.plan_sel != "Otro",
+            key="otro_texto"
         )
 
-    with col4:
-        st.text_input(
-            "Colocar Libras",
-            value=st.session_state.libras,
-            disabled=True
-        )
-
-        if st.button("⌨️", disabled=not causa_ok):
+    with c4:
+        st.text_input("Libras", value=st.session_state.libras, disabled=True)
+        if st.button("⌨️", disabled=not escaneado):
             st.session_state.abrir_teclado = True
 
-    # ========= FILA 5 =========
-    col5, col6 = st.columns(2)
+    # ================= FILA 5 =================
+    c5, c6 = st.columns(2)
 
-    with col5:
+    with c5:
         firmas = []
-        if maquina:
+        if st.session_state.maquina_sel:
             firmas = df_maquinistas[
-                df_maquinistas["maquina"] == maquina
+                df_maquinistas["maquina"] == st.session_state.maquina_sel
             ]["nombre"].tolist()
 
-        firma = st.selectbox(
-            "Seleccionar maquinista",
+        st.session_state.firma_sel = st.selectbox(
+            "Maquinista",
             firmas,
-            disabled=not maquina
+            disabled=not st.session_state.maquina_sel,
+            key="firma_sel"
         )
 
-    with col6:
-        fecha = st.date_input("Seleccionar Fecha", st.session_state.fecha)
+    with c6:
+        st.session_state.fecha = st.date_input("Fecha", st.session_state.fecha)
 
     st.divider()
 
-    # ========= GUARDAR =========
+    # ================= GUARDAR =================
     if st.button("Guardar", use_container_width=True):
 
-        causa_final = causa_manual if causa_manual else st.session_state.causa_qr
+        causa_final = (
+            st.session_state.otro_texto
+            if st.session_state.otro_texto
+            else st.session_state.causa_qr
+        )
 
         if not all([
             causa_final,
-            maquina,
-            parte,
-            plan,
-            st.session_state.libras
+            st.session_state.maquina_sel,
+            st.session_state.parte_sel,
+            st.session_state.plan_sel,
+            st.session_state.libras,
+            st.session_state.firma_sel
         ]):
-            st.error("❌ Faltan datos obligatorios")
+            st.error("❌ Faltan datos")
             return
 
         insertar_tabla("scrap_registrado", {
-            "fecha": str(fecha),
-            "maquina": maquina,
-            "parte": parte,
+            "fecha": str(st.session_state.fecha),
+            "maquina": st.session_state.maquina_sel,
+            "parte": st.session_state.parte_sel,
             "causa": causa_final,
-            "plan_accion": plan,
+            "plan_accion": st.session_state.plan_sel,
             "libras": float(st.session_state.libras),
-            "firma": firma
+            "firma": st.session_state.firma_sel,
         })
 
-        st.success("✅ Scrap guardado")
+        st.success("✅ Guardado")
 
-        # ===== LIMPIAR TODO =====
-        st.session_state.modo_scan = False
-        st.session_state.causa_qr = ""
-        st.session_state.libras = ""
-        st.session_state.maquina = ""
-        st.session_state.parte = ""
+        # ===== RESET TOTAL =====
+        for k in [
+            "causa_qr","maquina_sel","parte_sel","plan_sel",
+            "otro_texto","libras","firma_sel"
+        ]:
+            st.session_state[k] = ""
+
         st.session_state.fecha = datetime.now().date()
-
         st.rerun()
+
 
 # ================= NUEVO =================
 def nuevo():
