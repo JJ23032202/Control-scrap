@@ -628,9 +628,9 @@ def graficos():
 
     # ================= GRÁFICA 3: TIPO DE SCRAP =================
     with col3:
-        st.subheader("Tipo de scrap")
+        st.subheader("Tipo de causa")
 
-        data = df["plan_accion"].value_counts()
+        data = df["causa"].value_counts()
 
         fig, ax = plt.subplots()
         ax.pie(
