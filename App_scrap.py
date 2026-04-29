@@ -23,6 +23,10 @@ def init_state():
         "maquina": "",
         "libras": "",
         "fecha": datetime.now().date(),
+        "modo_scan": False,
+        "qr_buffer": "",
+        "causa_qr": "",
+
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -48,14 +52,28 @@ def insertar_tabla(tabla, data):
         st.error(f"Error insertando en {tabla}: {e}")
 
 # ================= HEADER =================
-def header(titulo):
-    col1, col2 = st.columns([1,6])
+
+def render_header(titulo):
+    col1, col2, col3 = st.columns([1, 6, 1])
+
     with col1:
         if st.button("⬅️"):
             st.session_state.pantalla = "menu"
             st.rerun()
+
     with col2:
-        st.markdown(f"## {titulo}")
+        st.markdown(
+            f"<h2 style='text-align:center; color:#E36B2C;'>{titulo}</h2>",
+            unsafe_allow_html=True
+        )
+
+    with col3:
+        st.image(
+            "https://hdscbglzatctcjzecean.supabase.co/storage/v1/object/public/logo_versigent/logo_versigent.png",
+            width=140
+        )
+
+
 
 # ================= MENU =================
 def menu():
@@ -76,63 +94,125 @@ def menu():
             st.session_state.pantalla = "graficos"
 
 # ================= ESCANEO =================
-def escaneo():
-    header("Escaneo")
 
+def escaneo():
+    render_header("Escaneo de Scrap")
+
+    # ================= FILA 1: ESCANEAR =================
+    if st.button("🔍 Escanear", use_container_width=True):
+        st.session_state.modo_scan = True
+        st.session_state.causa_qr = ""
+
+    # ===== INPUT OCULTO PARA SCANNER ZEBRA =====
+    if st.session_state.modo_scan:
+        qr = st.text_input("QR", key="qr_input", label_visibility="collapsed")
+
+        if qr:
+            st.session_state.causa_qr = qr.strip()
+            st.session_state.modo_scan = False
+
+    # ================= FILA 2: CAUSA =================
+    st.text_input(
+        "Causa",
+        value=st.session_state.causa_qr,
+        disabled=True
+    )
+
+    st.divider()
+
+    # ================= CARGAR CATÁLOGOS =================
     df_maquinas = leer_tabla("maquinas")
     df_partes = leer_tabla("numeros_parte")
     df_planes = leer_tabla("planes_accion")
     df_maquinistas = leer_tabla("maquinistas")
 
-    # -------- MAQUINAS --------
-    maquinas = df_maquinas.get("nombre_maquina", pd.Series()).dropna().tolist()
-    maquina = st.selectbox("Máquina", maquinas) if maquinas else None
+    # ================= FILA 3 =================
+    col1, col2 = st.columns(2)
 
-    # -------- PARTES --------
-    partes = []
-    if maquina and not df_partes.empty:
-        partes = df_partes[df_partes["maquina"] == maquina]["numero_parte"].tolist()
+    with col1:
+        maquinas = df_maquinas["nombre_maquina"].dropna().tolist()
+        maquina = st.selectbox("Seleccionar Máquina", maquinas)
 
-    parte = st.selectbox("Parte", partes) if partes else None
+    with col2:
+        partes = []
+        if maquina:
+            partes = (
+                df_partes[df_partes["maquina"] == maquina]["numero_parte"]
+                .dropna()
+                .tolist()
+            )
+        parte = st.selectbox("Seleccionar Número de Parte", partes)
 
-    # -------- PLAN --------
-    planes = df_planes.get("plan", pd.Series()).dropna().tolist()
-    plan = st.selectbox("Plan", planes) if planes else None
+    # ================= FILA 4 =================
+    col3, col4 = st.columns(2)
 
-    # -------- FIRMA --------
-    firmas = []
-    if maquina and not df_maquinistas.empty:
-        firmas = df_maquinistas[df_maquinistas["maquina"] == maquina]["nombre"].tolist()
+    with col3:
+        planes = df_planes["plan"].dropna().tolist()
+        plan = st.selectbox("Seleccionar Plan de acción", planes)
 
-    firma = st.selectbox("Firma", firmas) if firmas else None
+        causa_manual = st.text_input("Colocar otro (manual)")
 
-    # -------- INPUTS --------
-    causa = st.text_input("Causa")
-    libras = st.text_input("Libras")
-    fecha = st.date_input("Fecha", datetime.now().date())
+    with col4:
+        st.text_input(
+            "Colocar Libras",
+            value=st.session_state.libras,
+            disabled=True
+        )
 
-    # -------- GUARDAR --------
-    if st.button("Guardar"):
-        if not all([maquina, parte, causa, plan, firma, libras]):
-            st.error("Faltan datos")
+        if st.button("⌨️"):
+            # Aquí entra TU teclado numérico existente
+            st.session_state.libras = ""
+
+    # ================= FILA 5 =================
+    col5, col6 = st.columns(2)
+
+    with col5:
+        firmas = []
+        if maquina:
+            firmas = (
+                df_maquinistas[df_maquinistas["maquina"] == maquina]["nombre"]
+                .dropna()
+                .tolist()
+            )
+        firma = st.selectbox("Seleccionar maquinista", firmas)
+
+    with col6:
+        fecha = st.date_input("Seleccionar Fecha", st.session_state.fecha)
+
+    st.divider()
+
+    # ================= GUARDAR =================
+    if st.button("Guardar", use_container_width=True):
+
+        causa_final = causa_manual if causa_manual else st.session_state.causa_qr
+
+        if not all([causa_final, maquina, parte, plan, st.session_state.libras]):
+            st.error("❌ Faltan datos")
             return
 
         insertar_tabla("scrap_registrado", {
             "fecha": str(fecha),
             "maquina": maquina,
             "parte": parte,
-            "causa": causa,
+            "causa": causa_final,
             "plan_accion": plan,
-            "libras": float(libras),
+            "libras": float(st.session_state.libras),
             "firma": firma
         })
 
-        st.success("Guardado correctamente")
+        st.success("✅ Scrap guardado correctamente")
+
+        # ===== LIMPIAR TOdo =====
+        st.session_state.modo_scan = False
+        st.session_state.causa_qr = ""
+        st.session_state.libras = ""
+        st.session_state.fecha = datetime.now().date()
+
         st.rerun()
 
 # ================= NUEVO =================
 def nuevo():
-    header("Nuevo")
+    render_header("Nuevo")
 
     # -------- MAQUINA --------
     with st.expander("Máquina"):
@@ -187,7 +267,7 @@ def nuevo():
 
 # ================= HISTORIAL =================
 def historial():
-    header("Historial")
+    render_header("Historial")
 
     df = leer_tabla("scrap_registrado")
 
@@ -206,7 +286,7 @@ def historial():
 
 # ================= GRAFICOS =================
 def graficos():
-    header("Gráficos")
+    render_header("Gráficos")
 
     df = leer_tabla("scrap_registrado")
 
