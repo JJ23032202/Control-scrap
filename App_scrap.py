@@ -457,7 +457,7 @@ def historial():
             df = df[df["maquina"] == filtro_maquina]
 
     if limpiar:
-        st.session_state.filtro_fechas = (None, None)
+        st.session_state.filtro_fechas = (date.today(), date.today())
         st.session_state.filtro_parte = "Todos"
         st.session_state.filtro_maquina = "Todas"
         st.rerun()
@@ -479,18 +479,18 @@ def historial():
             <div class="card {card_class}">
                 <div class="card-row">
                     <div>
-                        <div class="card-title">Máquina</div>
+                        <div class="card-title">Máquina:</div>
                         <div>{row.get("maquina", "")}</div>
-                        <div><b>Plan:</b> {plan_mostrar}</div>
+                        <div><b>Plan de accion:</b> {plan_mostrar}</div>
                     </div>
                     <div>
-                        <div class="card-title"># Parte</div>
+                        <div class="card-title"># Parte: </div>
                         <div>{row.get("parte", "")}</div>
                         <div><b>Lb:</b> {row.get("libras", "")}</div>
                     </div>
                     <div>
-                        <div class="card-title">Causa</div>
-                        <div>{row.get("causa", "")}</div>
+                        <div class="card-title">Causa: </div>
+                        <div>{row.get("causa", "")}</div></div><b>Fecha:</b> {row.get("fecha", "")}</div>
                     </div>
                 </div>
             </div>
@@ -519,9 +519,6 @@ def historial():
         "otra_causa": "otro_plan"
     })
 
-    # Mostrar en pantalla
-    st.dataframe(df)
-
     # Descargar Excel
     output = io.BytesIO()
     df.to_excel(output, index=False)
@@ -538,59 +535,142 @@ def historial():
 def graficos():
     render_header("Graficos")
 
-    # Calendario
-    col_cal, _ = st.columns([2, 8])
+    # ================= FILTRO DE FECHAS =================
+    col_cal, col_all, _ = st.columns([2, 2, 6])
+
     with col_cal:
         rango_fechas = st.date_input(
             "Calendario",
-            value=(date.today(), date.today())
+            value=(date.today(), date.today()),
+            key="grafico_fechas"
         )
 
+    with col_all:
+        ver_todo = st.checkbox("Ver todo", value=True)
 
+    # ================= LEER DATOS =================
     df = leer_tabla("scrap_registrado")
+
     if df.empty:
-        st.info("Sin datos")
+        st.info("Sin datos para mostrar")
         return
 
     df["fecha"] = pd.to_datetime(df["fecha"], errors="coerce")
 
-    if rango_fechas and rango_fechas[0] and rango_fechas[1]:
+    # ================= APLICAR FILTRO =================
+    if not ver_todo and rango_fechas and rango_fechas[0] and rango_fechas[1]:
+        fecha_inicio, fecha_fin = rango_fechas
         df = df[
-            (df["fecha"].dt.date >= rango_fechas[0]) &
-            (df["fecha"].dt.date <= rango_fechas[1])
+            (df["fecha"].dt.date >= fecha_inicio) &
+            (df["fecha"].dt.date <= fecha_fin)
         ]
 
+    # ================= LAYOUT 2x2 =================
     col1, col2 = st.columns(2)
     col3, col4 = st.columns(2)
 
+    # ================= GRÁFICA 1: # PARTE =================
     with col1:
         st.subheader("#parte")
-        data = df.groupby("parte").size().head(6)
+
+        data = (
+            df.groupby("parte")
+            .size()
+            .sort_values(ascending=False)
+            .head(6)
+        )
+
         fig, ax = plt.subplots()
-        ax.bar(data.index, data.values)
+        bars = ax.bar(data.index, data.values, color="#6BB23E")
+
+        ax.set_title("#parte")
+        ax.set_xlabel("Número de Parte")
+        ax.set_ylabel("Cantidad")
+
+        # Valores sobre barras
+        for bar in bars:
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                bar.get_height(),
+                f"{int(bar.get_height())}",
+                ha="center",
+                va="bottom"
+            )
+
         st.pyplot(fig)
 
+    # ================= GRÁFICA 2: MÁQUINA =================
     with col2:
-        st.subheader("maquina")
-        data = df.groupby("maquina").size().head(6)
+        st.subheader("Máquina")
+
+        data = (
+            df.groupby("maquina")
+            .size()
+            .sort_values(ascending=False)
+        )
+
         fig, ax = plt.subplots()
-        ax.barh(data.index, data.values)
+        bars = ax.barh(data.index, data.values, color="#1E6F1C")
+
+        ax.set_title("Máquina")
+        ax.set_xlabel("Cantidad")
+        ax.set_ylabel("Máquina")
+
+        for bar in bars:
+            ax.text(
+                bar.get_width(),
+                bar.get_y() + bar.get_height() / 2,
+                f"{int(bar.get_width())}",
+                va="center"
+            )
+
         st.pyplot(fig)
 
+    # ================= GRÁFICA 3: TIPO DE SCRAP =================
     with col3:
         st.subheader("Tipo de scrap")
+
         data = df["plan_accion"].value_counts()
+
         fig, ax = plt.subplots()
-        ax.pie(data.values, labels=data.index,
-               wedgeprops=dict(width=0.4))
+        ax.pie(
+            data.values,
+            labels=data.index,
+            startangle=90,
+            autopct="%d",
+            wedgeprops=dict(width=0.4)
+        )
         ax.axis("equal")
+
         st.pyplot(fig)
 
+    # ================= GRÁFICA 4: LB POR PARTE =================
     with col4:
-        st.subheader("$/Lb")
-        data = df.groupby("parte")["libras"].sum().head(6)
+        st.subheader("Lb por parte")
+
+        data = (
+            df.groupby("parte")["libras"]
+            .sum()
+            .sort_values(ascending=False)
+            .head(6)
+        )
+
         fig, ax = plt.subplots()
-        ax.bar(data.index, data.values)
+        bars = ax.bar(data.index, data.values, color="#6BB23E")
+
+        ax.set_title("Lb por parte")
+        ax.set_xlabel("Número de Parte")
+        ax.set_ylabel("Libras")
+
+        for bar in bars:
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                bar.get_height(),
+                f"{int(bar.get_height())}",
+                ha="center",
+                va="bottom"
+            )
+
         st.pyplot(fig)
 
    
