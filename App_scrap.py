@@ -108,60 +108,50 @@ def escaneo():
         st.session_state._qr_tmp = ""
 
     if st.session_state.modo_scan:
-        qr = st.text_input("", key="_qr_tmp", placeholder="Escanee QR…")
+        qr = st.text_input(
+            "",
+            key="_qr_tmp",
+            placeholder="Escanee QR…",
+            label_visibility="collapsed"
+        )
         if qr:
             st.session_state.causa_qr = qr.strip()
             st.session_state.modo_scan = False
             st.rerun()
 
-    st.text_input("Causa", value=st.session_state.causa_qr, disabled=True)
+    # ========= CAUSA =========
+    st.text_input("Causa", st.session_state.causa_qr, disabled=True)
 
-    escaneado = st.session_state.causa_qr != ""
     st.divider()
 
-    # ========= CATÁLOGOS =========
+    # ========= CARGA DE DATOS =========
     df_maquinas = leer_tabla("maquinas")
     df_partes = leer_tabla("numeros_parte")
     df_planes = leer_tabla("planes_accion")
     df_maquinistas = leer_tabla("maquinistas")
 
     # ========= FILA 3 =========
-    c1, c2 = st.columns(2)
+    col1, col2 = st.columns(2)
 
-    with c1:
+    with col1:
         maquinas = ["-- Seleccione --"] + df_maquinas["nombre_maquina"].dropna().tolist()
-        st.selectbox(
-            "Máquina",
-            maquinas,
-            key="maquina_sel",
-            disabled=not escaneado
-        )
+        st.selectbox("Máquina", maquinas, key="maquina_sel")
 
-    with c2:
+    with col2:
         partes = ["-- Seleccione --"]
         if st.session_state.maquina_sel != "-- Seleccione --":
             partes += df_partes[
                 df_partes["maquina"] == st.session_state.maquina_sel
             ]["numero_parte"].dropna().tolist()
 
-        st.selectbox(
-            "Número de parte",
-            partes,
-            key="parte_sel",
-            disabled=st.session_state.maquina_sel == "-- Seleccione --"
-        )
+        st.selectbox("Número de parte", partes, key="parte_sel")
 
     # ========= FILA 4 =========
-    c3, c4 = st.columns(2)
+    col3, col4 = st.columns(2)
 
-    with c3:
+    with col3:
         planes = ["-- Seleccione --"] + df_planes["plan"].dropna().tolist()
-        st.selectbox(
-            "Plan de acción",
-            planes,
-            key="plan_sel",
-            disabled=not escaneado
-        )
+        st.selectbox("Plan de acción", planes, key="plan_sel")
 
         st.text_input(
             "Colocar otro",
@@ -169,29 +159,22 @@ def escaneo():
             disabled=st.session_state.plan_sel.upper() != "OTRO"
         )
 
-    with c4:
-        st.text_input("Libras", value=st.session_state.libras, disabled=True)
-        if st.button("⌨️", disabled=not escaneado):
-            st.session_state.abrir_teclado = True
+    with col4:
+        st.text_input("Libras", key="libras")
 
     # ========= FILA 5 =========
-    c5, c6 = st.columns(2)
+    col5, col6 = st.columns(2)
 
-    with c5:
+    with col5:
         firmas = ["-- Seleccione --"]
         if st.session_state.maquina_sel != "-- Seleccione --":
             firmas += df_maquinistas[
                 df_maquinistas["maquina"] == st.session_state.maquina_sel
             ]["nombre"].dropna().tolist()
 
-        st.selectbox(
-            "Maquinista",
-            firmas,
-            key="firma_sel",
-            disabled=st.session_state.maquina_sel == "-- Seleccione --"
-        )
+        st.selectbox("Maquinista", firmas, key="firma_sel")
 
-    with c6:
+    with col6:
         st.date_input("Fecha", key="fecha")
 
     st.divider()
@@ -204,12 +187,14 @@ def escaneo():
             else st.session_state.causa_qr
         )
 
-        if "-- Seleccione --" in (
-            st.session_state.maquina_sel,
-            st.session_state.parte_sel,
-            st.session_state.plan_sel,
-            st.session_state.firma_sel
-        ) or not st.session_state.libras:
+        if (
+            st.session_state.causa_qr == ""
+            or st.session_state.maquina_sel == "-- Seleccione --"
+            or st.session_state.parte_sel == "-- Seleccione --"
+            or st.session_state.plan_sel == "-- Seleccione --"
+            or st.session_state.firma_sel == "-- Seleccione --"
+            or st.session_state.libras == ""
+        ):
             st.error("❌ Faltan datos")
             return
 
@@ -223,17 +208,18 @@ def escaneo():
             "firma": st.session_state.firma_sel,
         })
 
-        st.success("✅ Guardado")
+        st.success("✅ Guardado correctamente")
 
         # RESET
-        st.session_state.maquina_sel = "-- Seleccione --"
-        st.session_state.parte_sel = "-- Seleccione --"
-        st.session_state.plan_sel = "-- Seleccione --"
-        st.session_state.firma_sel = "-- Seleccione --"
-        st.session_state.otro_texto = ""
-        st.session_state.causa_qr = ""
-        st.session_state.libras = ""
+        for k in [
+            "causa_qr","maquina_sel","parte_sel",
+            "plan_sel","otro_texto",
+            "libras","firma_sel"
+        ]:
+            st.session_state[k] = ""
+
         st.rerun()
+
 
 # ================= NUEVO =================
 def nuevo():
