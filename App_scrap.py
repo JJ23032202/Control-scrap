@@ -17,8 +17,8 @@ st.set_page_config(page_title="Control de Scrap", layout="wide")
 
 # ================= SESSION =================
 def init_state():
-    
     defaults = {
+        "pantalla": "menu",
         "modo_scan": False,
         "causa_qr": "",
         "maquina_sel": "",
@@ -29,12 +29,12 @@ def init_state():
         "firma_sel": "",
         "fecha": datetime.now().date(),
     }
-
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
 
 init_state()
+
 
 # ================= HELPERS =================
 def leer_tabla(tabla):
@@ -333,6 +333,11 @@ def graficos():
     plt.xticks(rotation=45)
 
     st.pyplot(fig)
+
+
+
+if "pantalla" not in st.session_state:
+    st.session_state.pantalla = "menu"
 
 # ================= ROUTER =================
 if st.session_state.pantalla == "menu":
