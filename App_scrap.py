@@ -240,7 +240,7 @@ def leer_scrap_supabase():
         supabase
         .table("ScrapRegistrado")
         .select("*")
-        .order("fecha", desc=True)
+        .order("Fecha", desc=True)
         .execute()
     )
 
