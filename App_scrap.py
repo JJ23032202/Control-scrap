@@ -274,27 +274,35 @@ def escaneo():
         st.session_state.causa_qr = ""
         st.session_state._qr_tmp = ""
         
-    if qr:
-        texto = qr.strip()
+ 
+# Input QR SOLO cuando está en modo escaneo
+    if st.session_state.modo_scan:
+        qr = st.text_input(
+            "",
+            key="qr_input",
+            placeholder="Escanee el QR…",
+            label_visibility="collapsed"
+        )
     
-        if "-" in texto:
-            parte_maquina, parte_causa = texto.split("-", 1)
+        if qr:
+            texto = qr.strip()
     
-            maquina_qr = parte_maquina.strip()
-            causa_qr = parte_causa.strip()
+            # Esperamos formato: NUM_MAQUINA - CAUSA
+            if "-" in texto:
+                parte_maquina, parte_causa = texto.split("-", 1)
     
-            # Guardar valores
-            st.session_state.causa_qr = causa_qr
-            st.session_state.maquina_sel = maquina_qr
+                maquina_qr = parte_maquina.strip()
+                causa_qr = parte_causa.strip()
     
-            # 🔒 Bloquear máquina porque viene del QR
-            st.session_state.maquina_por_qr = True
-        else:
-            st.error("QR inválido. Formato esperado: NUM_MAQUINA - CAUSA")
-            return
-    
-        st.session_state.modo_scan = False
-        st.rerun()
+                # Guardar valores capturados
+                st.session_state.maquina_sel = maquina_qr
+                st.session_state.causa_qr = causa_qr
+                st.session_state.maquina_por_qr = True
+            else:
+                st.error("QR inválido. Formato esperado: NUM_MAQUINA - CAUSA")
+                return    
+            st.session_state.modo_scan = False
+            st.rerun()
 
 
     st.text_input("Causa", st.session_state.causa_qr, disabled=True)
