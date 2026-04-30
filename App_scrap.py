@@ -162,7 +162,8 @@ def init_state():
         "firma_sel": "-- Seleccione --",
         "fecha": datetime.now().date(),
         "abrir_teclado": False,
-        "limpiar_form": False
+        "limpiar_form": False,
+        "maquina_por_qr": False,
     }
 
     for k, v in defaults.items():
@@ -261,25 +262,40 @@ def escaneo():
         st.session_state.libras = ""
         st.session_state.firma_sel = "-- Seleccione --"
         st.session_state.fecha = datetime.now().date()
+        st.session_state.maquina_por_qr = False
+        st.session_state.causa_qr = ""
+
         st.session_state.limpiar_form = False
+        
 
     # ================= ESCANEAR QR =================
     if st.button("🔍 Escanear", use_container_width=True):
         st.session_state.modo_scan = True
         st.session_state.causa_qr = ""
         st.session_state._qr_tmp = ""
+        
+    if qr:
+        texto = qr.strip()
+    
+        if "-" in texto:
+            parte_maquina, parte_causa = texto.split("-", 1)
+    
+            maquina_qr = parte_maquina.strip()
+            causa_qr = parte_causa.strip()
+    
+            # Guardar valores
+            st.session_state.causa_qr = causa_qr
+            st.session_state.maquina_sel = maquina_qr
+    
+            # 🔒 Bloquear máquina porque viene del QR
+            st.session_state.maquina_por_qr = True
+        else:
+            st.error("QR inválido. Formato esperado: NUM_MAQUINA - CAUSA")
+            return
+    
+        st.session_state.modo_scan = False
+        st.rerun()
 
-    if st.session_state.modo_scan:
-        qr = st.text_input(
-            "",
-            key="_qr_tmp",
-            placeholder="Escanee el QR…",
-            label_visibility="collapsed"
-        )
-        if qr:
-            st.session_state.causa_qr = qr.strip()
-            st.session_state.modo_scan = False
-            st.rerun()
 
     st.text_input("Causa", st.session_state.causa_qr, disabled=True)
     st.divider()
@@ -299,10 +315,12 @@ def escaneo():
     col1, col2 = st.columns(2)
 
     with col1:
-        maquinas = ["-- Seleccione --"] + df_maquinas["nombre_maquina"].dropna().tolist()
-        st.selectbox("Máquina", maquinas, key="maquina_sel")
-
-    maquina_id = map_maquinas.get(st.session_state.maquina_sel)
+        st.selectbox(
+            "Máquina",
+            maquinas,
+            key="maquina_sel",
+            disabled=st.session_state.maquina_por_qr
+        )
 
     with col2:
         partes = ["-- Seleccione --"]
@@ -382,6 +400,7 @@ def escaneo():
             "otra_causa": otra_causa,     # ✅ texto SOLO si es OTRO
             "libras": float(st.session_state.libras),
             "firma": st.session_state.firma_sel,
+            
         })
 
         st.success("✅ Scrap guardado correctamente")
