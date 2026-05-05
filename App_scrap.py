@@ -316,8 +316,6 @@ def escaneo():
 
     # ================= FILA 1 =================
     col1, col2 = st.columns(2)
-
-
     with col1:
         if st.session_state.maquina_por_qr:
             st.text_input(
@@ -325,6 +323,7 @@ def escaneo():
                 st.session_state.maquina_sel,
                 disabled=True
             )
+            st.info("🔒 Máquina asignada automáticamente por QR")
         else:
             st.selectbox(
                 "Máquina",
