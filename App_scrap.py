@@ -316,8 +316,10 @@ def escaneo():
 
     # ================= FILA 1 =================
     col1, col2 = st.columns(2)
+
     with col1:
-        if st.session_state.maquina_por_qr:
+        # ✅ Si ya hay causa, ENTONCES viene del QR → campo gris
+        if st.session_state.causa_qr != "":
             st.text_input(
                 "Máquina",
                 st.session_state.maquina_sel,
