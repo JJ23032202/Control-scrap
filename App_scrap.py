@@ -253,6 +253,7 @@ def menu():
 def escaneo():
     render_header("Escaneo de Scrap")
 
+    # ===== LIMPIEZA CONTROLADA =====
     if st.session_state.limpiar_form:
         st.session_state.causa_qr = ""
         st.session_state.maquina_sel = "-- Seleccione --"
@@ -261,50 +262,39 @@ def escaneo():
         st.session_state.otro_texto = ""
         st.session_state.libras = ""
         st.session_state.firma_sel = "-- Seleccione --"
-        st.session_state.fecha = datetime.now().date()
+        st.session_state.fecha = date.today()
         st.session_state.maquina_por_qr = False
-        st.session_state.causa_qr = ""
-
         st.session_state.limpiar_form = False
-        
 
     # ================= ESCANEAR QR =================
     if st.button("🔍 Escanear", use_container_width=True):
         st.session_state.modo_scan = True
-        st.session_state.causa_qr = ""
-        st.session_state._qr_tmp = ""
-        
- 
-# Input QR SOLO cuando está en modo escaneo
+
     if st.session_state.modo_scan:
         qr = st.text_input(
             "",
             key="qr_input",
-            placeholder="Escanee el QR…",
+            placeholder="Escanee el QR…  (ej. 45 - rechazo)",
             label_visibility="collapsed"
         )
-    
+
         if qr:
             texto = qr.strip()
-    
-            # Esperamos formato: NUM_MAQUINA - CAUSA
-            if "-" in texto:
-                parte_maquina, parte_causa = texto.split("-", 1)
-    
-                maquina_qr = parte_maquina.strip()
-                causa_qr = parte_causa.strip()
-    
-                # Guardar valores capturados
-                st.session_state.maquina_sel = maquina_qr
-                st.session_state.causa_qr = causa_qr
-                st.session_state.maquina_por_qr = True
-            else:
+
+            if "-" not in texto:
                 st.error("QR inválido. Formato esperado: NUM_MAQUINA - CAUSA")
-                return    
+                return
+
+            parte_maquina, parte_causa = texto.split("-", 1)
+
+            st.session_state.maquina_sel = parte_maquina.strip()
+            st.session_state.causa_qr = parte_causa.strip()
+            st.session_state.maquina_por_qr = True
+
             st.session_state.modo_scan = False
             st.rerun()
 
-
+    # ================= CAUSA =================
     st.text_input("Causa", st.session_state.causa_qr, disabled=True)
     st.divider()
 
@@ -314,26 +304,17 @@ def escaneo():
     df_planes = leer_tabla("planes_accion")
     df_maquinistas = leer_tabla("maquinistas")
 
-    # ===== MAPEO nombre -> id =====
-    map_maquinas = dict(
-        zip(df_maquinas["nombre_maquina"], df_maquinas["id"])
-    )
-
-    # ================= DEFINIR LISTA DE MAQUINAS =================
-    df_maquinas = leer_tabla("maquinas")
-    
+    # ================= LISTA DE MAQUINAS (OBLIGATORIA) =================
     maquinas = (
-        df_maquinas["nombre_maquina"]
+        df_maachines["nombre_maquina"]
         .dropna()
         .astype(str)
         .unique()
         .tolist()
     )
-    
-    # Asegurar opción base
     maquinas = ["-- Seleccione --"] + sorted(maquinas)
 
-    # ================= FILA 3 =================
+    # ================= FILA 1 =================
     col1, col2 = st.columns(2)
 
     with col1:
@@ -346,14 +327,14 @@ def escaneo():
 
     with col2:
         partes = ["-- Seleccione --"]
-        if maquina_id is not None:
+        if st.session_state.maquina_sel != "-- Seleccione --":
             partes += df_partes[
-                df_partes["maquina"] == maquina_id
+                df_partes["maquina"] == st.session_state.maquina_sel
             ]["numero_parte"].dropna().tolist()
 
         st.selectbox("Número de parte", partes, key="parte_sel")
 
-    # ================= FILA 4 =================
+    # ================= FILA 2 =================
     col3, col4 = st.columns(2)
 
     with col3:
@@ -369,14 +350,14 @@ def escaneo():
     with col4:
         st.text_input("Libras", key="libras")
 
-    # ================= FILA 5 =================
+    # ================= FILA 3 =================
     col5, col6 = st.columns(2)
 
     with col5:
         firmas = ["-- Seleccione --"]
-        if maquina_id is not None:
+        if st.session_state.maquina_sel != "-- Seleccione --":
             firmas += df_maquinistas[
-                df_maquinistas["maquina"] == maquina_id
+                df_maquinistas["maquina"] == st.session_state.maquina_sel
             ]["nombre"].dropna().tolist()
 
         st.selectbox("Maquinista", firmas, key="firma_sel")
@@ -386,11 +367,9 @@ def escaneo():
 
     st.divider()
 
-   
-# ================= GUARDAR =================
+    # ================= GUARDAR =================
     if st.button("Guardar", use_container_width=True):
 
-        # ----- PLAN Y OTRA_CAUSA -----
         if st.session_state.plan_sel.upper() == "OTRO":
             otra_causa = st.session_state.otro_texto.strip()
             if not otra_causa:
@@ -401,7 +380,6 @@ def escaneo():
             plan_accion = st.session_state.plan_sel
             otra_causa = None
 
-        # ----- VALIDACIONES -----
         if (
             st.session_state.causa_qr == ""
             or st.session_state.maquina_sel == "-- Seleccione --"
@@ -412,23 +390,21 @@ def escaneo():
             st.error("❌ Faltan datos obligatorios")
             return
 
-        # ----- INSERT CORRECTO -----
         insertar_tabla("scrap_registrado", {
             "fecha": str(st.session_state.fecha),
-            "maquina": maquina_id,
+            "maquina": st.session_state.maquina_sel,
             "parte": st.session_state.parte_sel,
             "causa": st.session_state.causa_qr,
-            "plan_accion": plan_accion,   # ✅ siempre algo válido
-            "otra_causa": otra_causa,     # ✅ texto SOLO si es OTRO
+            "plan_accion": plan_accion,
+            "otra_causa": otra_causa,
             "libras": float(st.session_state.libras),
             "firma": st.session_state.firma_sel,
-            
         })
 
         st.success("✅ Scrap guardado correctamente")
-
         st.session_state.limpiar_form = True
         st.rerun()
+
 
 # ================= NUEVO =================
 def nuevo():
