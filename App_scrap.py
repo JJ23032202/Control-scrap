@@ -306,7 +306,7 @@ def escaneo():
 
     # ================= LISTA DE MAQUINAS (OBLIGATORIA) =================
     maquinas = (
-        df_machines["nombre_maquina"]
+        df_maquinas["nombre_maquina"]
         .dropna()
         .astype(str)
         .unique()
