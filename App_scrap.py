@@ -317,13 +317,20 @@ def escaneo():
     # ================= FILA 1 =================
     col1, col2 = st.columns(2)
 
+
     with col1:
-        st.selectbox(
-            "Máquina",
-            maquinas,
-            key="maquina_sel",
-            disabled=st.session_state.maquina_por_qr
-        )
+        if st.session_state.maquina_por_qr:
+            st.text_input(
+                "Máquina",
+                st.session_state.maquina_sel,
+                disabled=True
+            )
+        else:
+            st.selectbox(
+                "Máquina",
+                maquinas,
+                key="maquina_sel"
+            )
 
     with col2:
         partes = ["-- Seleccione --"]
