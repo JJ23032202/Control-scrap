@@ -319,6 +319,20 @@ def escaneo():
         zip(df_maquinas["nombre_maquina"], df_maquinas["id"])
     )
 
+    # ================= DEFINIR LISTA DE MAQUINAS =================
+    df_maquinas = leer_tabla("maquinas")
+    
+    maquinas = (
+        df_maquinas["nombre_maquina"]
+        .dropna()
+        .astype(str)
+        .unique()
+        .tolist()
+    )
+    
+    # Asegurar opción base
+    maquinas = ["-- Seleccione --"] + sorted(maquinas)
+
     # ================= FILA 3 =================
     col1, col2 = st.columns(2)
 
