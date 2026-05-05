@@ -326,12 +326,6 @@ def escaneo():
                 disabled=True
             )
             st.info("🔒 Máquina asignada automáticamente por QR")
-        else:
-            st.selectbox(
-                "Máquina",
-                maquinas,
-                key="maquina_sel"
-            )
 
     with col2:
         partes = ["-- Seleccione --"]
