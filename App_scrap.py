@@ -318,15 +318,17 @@ def escaneo():
     col1, col2 = st.columns(2)
 
     with col1:
-        # ✅ Si ya hay causa, ENTONCES viene del QR → campo gris
-        if st.session_state.causa_qr != "":
-            st.text_input(
-                "Máquina",
-                st.session_state.maquina_sel,
-                disabled=True
-            )
-            st.info("🔒 Máquina asignada automáticamente por QR")
-
+        valor_maquina = (
+            st.session_state.maquina_sel
+            if st.session_state.maquina_sel != "-- Seleccione --"
+            else ""
+        )
+        st.text_input(
+            "Máquina",
+            value=valor_maquina,
+            placeholder="Escanee QR para asignar máquina",
+            disabled=True
+        )
     with col2:
         partes = ["-- Seleccione --"]
         if st.session_state.maquina_sel != "-- Seleccione --":
