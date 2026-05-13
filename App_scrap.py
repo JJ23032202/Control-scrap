@@ -216,7 +216,7 @@ def render_header(titulo):
 
 # ================= MENU =================
 def menu():
-    st.markdown("<h2 style='color:#0B2C4A;'>Menú Principal</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color:#0B2C4A;'>Menú Principal - Control de SCRAP</h2>", unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
     col3, col4 = st.columns(2)
