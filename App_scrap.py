@@ -332,11 +332,10 @@ def escaneo():
     with col2:
         partes = ["-- Seleccione --"]
         if st.session_state.maquina_sel != "-- Seleccione --":
-            
             maquina_num = int(st.session_state.maquina_sel)
-                df_partes["maquina"] = pd.to_numeric(df_partes["maquina"], errors="coerce").astype("Int64")
+            df_partes["maquina"] = pd.to_numeric(df_partes["maquina"], errors="coerce").astype("Int64")
             partes += df_partes[
-                df_partes["maquina"] == maquina_num
+            df_partes["maquina"] == maquina_num
                 ]["numero_parte"].dropna().tolist()
 
 
