@@ -332,10 +332,13 @@ def escaneo():
     with col2:
         partes = ["-- Seleccione --"]
         if st.session_state.maquina_sel != "-- Seleccione --":
+            
             maquina_num = int(st.session_state.maquina_sel)
+                df_partes["maquina"] = pd.to_numeric(df_partes["maquina"], errors="coerce").astype("Int64")
             partes += df_partes[
                 df_partes["maquina"] == maquina_num
-            ]["numero_parte"].dropna().tolist()
+                ]["numero_parte"].dropna().tolist()
+
 
         st.selectbox("Número de parte", partes, key="parte_sel")
 
@@ -361,11 +364,12 @@ def escaneo():
     with col5:
         firmas = ["-- Seleccione --"]
         if st.session_state.maquina_sel != "-- Seleccione --":
+            
             maquina_num = int(st.session_state.maquina_sel)
+            df_maquinistas["maquina"] = pd.to_numeric(df_maquinistas["maquina"], errors="coerce").astype("Int64")
             firmas += df_maquinistas[
                 df_maquinistas["maquina"] == maquina_num
             ]["nombre"].dropna().tolist()
-
 
         st.selectbox("Maquinista", firmas, key="firma_sel")
 
