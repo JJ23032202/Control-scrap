@@ -176,19 +176,45 @@ init_state()
 # ================= HELPERS =================
 def leer_tabla(tabla):
     try:
-        res = supabase.table(tabla).select("*").execute()
-        if not res.data:
-            return pd.DataFrame()
-        return pd.DataFrame(res.data)
+        datos = []
+        inicio = 0
+        limite = 1000
+
+        while True:
+            res = (
+                supabase
+                .table(tabla)
+                .select("*")
+                .range(inicio, inicio + limite - 1)
+                .execute()
+            )
+
+            if not res.data:
+                break
+
+            datos.extend(res.data)
+            inicio += limite
+
+        return pd.DataFrame(datos)
+
     except Exception as e:
         st.error(f"Error en {tabla}: {e}")
         return pd.DataFrame()
 
+
 def insertar_tabla(tabla, data):
     try:
-        supabase.table(tabla).insert(data).execute()
+        res = supabase.table(tabla).insert(data).execute()
+
+        if res.data is None:
+            st.error(f"No se insertaron datos en {tabla}")
+            return False
+
+        return True
+
     except Exception as e:
         st.error(f"Error insertando en {tabla}: {e}")
+        return False
 
 # ================= HEADER =================
 def render_header(titulo):
